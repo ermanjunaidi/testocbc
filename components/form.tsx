@@ -1,6 +1,6 @@
 'use client';
 
-import {  useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
 import { FormDataSchema } from '@/lib/schema';
@@ -12,16 +12,14 @@ type Inputs = z.infer<typeof FormDataSchema>;
 const steps = [
   { id: 'Step 1', name: 'metadata', fields: ['blogTitle', 'authorName'] },
   { id: 'Step 2', name: 'summary', fields: ['category', 'summary'] },
-  { id: 'Step 3', name: 'content', fields: 'content' },
+  { id: 'Step 3', name: 'content', fields: ['blogContent'] }, 
   { id: 'Step 4', name: 'resume' },
-
 ];
 
 export default function Form() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [previousStep, setPreviousStep] = useState(0);
   const [resumeData, setResumeData] = useState<Inputs | null>(null);
-  const delta = currentStep - previousStep;
+  const delta = useRef(0);
 
   const {
     register,
@@ -30,9 +28,7 @@ export default function Form() {
     trigger,
     getValues,
     formState: { errors },
-  } = useForm<Inputs>({
-    resolver: zodResolver(FormDataSchema),
-  });
+  } = useForm<Inputs>({ resolver: zodResolver(FormDataSchema) });
 
   const saveToLocalStorage = () => {
     const formData = getValues();
@@ -59,20 +55,17 @@ export default function Form() {
     if (!isValid) return;
 
     saveToLocalStorage();
-
     if (currentStep < steps.length - 1) {
-      setPreviousStep(currentStep);
+      delta.current = 1;
       setCurrentStep((step) => step + 1);
     }
 
-    if (currentStep === steps.length - 2) {
-      loadFromLocalStorage(); // 
-    }
+    if (currentStep === steps.length - 2) loadFromLocalStorage();
   };
 
   const prev = () => {
     if (currentStep > 0) {
-      setPreviousStep(currentStep);
+      delta.current = -1;
       setCurrentStep((step) => step - 1);
     }
   };
@@ -112,7 +105,7 @@ export default function Form() {
       <form className="mt-12 py-12" onSubmit={handleSubmit(processForm)}>
         {currentStep === 0 && (
           <motion.div
-            initial={{ x: delta >= 0 ? '50%' : '-50%', opacity: 0 }}
+            initial={{ x: delta.current >= 0 ? '50%' : '-50%', opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
@@ -132,14 +125,13 @@ export default function Form() {
                 error={errors.authorName}
                 autoComplete="author-name"
               />
-             
             </div>
           </motion.div>
         )}
 
         {currentStep === 1 && (
           <motion.div
-            initial={{ x: delta >= 0 ? '50%' : '-50%', opacity: 0 }}
+            initial={{ x: delta.current >= 0 ? '50%' : '-50%', opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
@@ -154,34 +146,33 @@ export default function Form() {
               />
               <SelectField
                 id="category"
-                label="category"
-                register={register}   
-                options={['Tech','Life Style','Business']}
+                label="Category"
+                register={register}
+                options={['Tech', 'Life Style', 'Business']}
                 error={errors.category}
               />
-              
             </div>
           </motion.div>
         )}
 
-        {currentStep === 2 && (
-          <motion.div
-            initial={{ x: delta >= 0 ? '50%' : '-50%', opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-          >
-            <h2 className="text-base font-semibold text-gray-900">Content</h2>
-            <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-              <InputField
-                id="blogContent"
-                label="Content"
-                register={register}
-                error={errors.blogContent}
-                autoComplete="content"
-              />
-            </div>
-          </motion.div>
-        )}
+{currentStep === 2 && (
+  <motion.div
+    initial={{ x: delta.current >= 0 ? '50%' : '-50%', opacity: 0 }}
+    animate={{ x: 0, opacity: 1 }}
+    transition={{ duration: 0.3, ease: 'easeInOut' }}
+  >
+    <h2 className="text-base font-semibold text-gray-900">Content</h2>
+    <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+      <InputField
+        id="blogContent"
+        label="Content"
+        register={register}
+        error={errors.blogContent}
+        autoComplete="content"
+      />
+    </div>
+  </motion.div>
+)}
 
         {currentStep === 3 && resumeData && (
           <div>
